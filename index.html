@@ -19,7 +19,22 @@
             height: 100vh; /* Viewport height */
         }
 
-
+        /* --- SCENE TITLE OVERLAY (NEW) --- */
+        #scene-title-overlay {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 1.25em;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 0 0 10px 10px; /* Rounded bottom corners */
+            z-index: 1001;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
         /* --- MINIMAP STYLES: SCALE REDUCED --- */
         #map-overlay {
             position: fixed;
@@ -101,7 +116,8 @@
         } -->
 </head>
 <body>
-
+    <!-- Scene Title Overlay -->
+    <div id="scene-title-overlay"></div>
     <!-- This is the main container for the virtual tour -->
     <div id="panorama"></div>
 
@@ -120,9 +136,8 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 
     <script type="text/javascript">
-        // Pannellum Initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            
+
+
             // --- MAP COORDINATES (SCALED FOR 250x125 RECTANGLE) ---
             const mapCoordinates = {
                 // Corner Coordinates (Likely at the perimeter of the map)
@@ -140,26 +155,65 @@
                 "Scene10_OutsideRoomD":{ x: 98, y: 17 }  
             };
 
-            const marker = document.getElementById('map-marker');
+        const marker = document.getElementById('map-marker');
+        const titleOverlay = document.getElementById('scene-title-overlay');
 
-            // Function to update the marker position
-            function updateMap(sceneId) {
-                const coords = mapCoordinates[sceneId];
-                if (coords) {
-                    // HIGHLIGHTED CHANGE: Y-offset decreased from 14px to 16px to shift the marker UP by 2 pixels.
-                    marker.style.transform = `translate(${coords.x - 14}px, ${coords.y - 16}px)`; 
-                    
-                } else {
-                    // Hide element if scene is not mapped
-                    marker.style.transform = `translate(-100px, -100px)`; 
-                }
+        // Function to update the marker position
+        function updateMap(sceneId) {
+            const coords = mapCoordinates[sceneId];
+            if (coords) {
+                // Y-offset is set to -16px to shift the teardrop marker up by 2 pixels.
+                marker.style.transform = `translate(${coords.x - 14}px, ${coords.y - 16}px)`; 
+                
+            } else {
+                // Hide element if scene is not mapped
+                marker.style.transform = `translate(-100px, -100px)`; 
             }
+        }
+        
+        // Function to update the title overlay
+        function updateTitle(sceneId, scenesConfig) {
+            // Find the title for the current scene ID
+            const scene = scenesConfig[sceneId];
+            if (scene && scene.title) {
+                titleOverlay.textContent = scene.title;
+            } else {
+                titleOverlay.textContent = "Virtual Tour";
+            }
+        }
 
 
+        // --- PANORAMIC HOTSPOT DEBUGGER (3D) ---
+        function debugHotspotCoordinates(viewerInstance) {
+            viewerInstance.on('mousedown', function(e) {
+                var coords = viewerInstance.mouseEventToCoords(e);
+                console.log('Pitch:', coords[0].toFixed(1), 'Yaw:', coords[1].toFixed(1));
+                console.log('--- Copy this for your hotspot: ---');
+                console.log('{"pitch": ' + coords[0].toFixed(1) + ', "yaw": ' + coords[1].toFixed(1) + ', "type": "scene", "text": "Next Room Name", "sceneId": "NextSceneID"}');
+            });
+            console.log("Hotspot Debugber Active (3D Pano): Click anywhere on the panorama to get Pitch/Yaw coordinates.");
+        }
+
+        // --- MINIMAP COORDINATE DEBUGGER (2D) ---
+        function debugMapCoordinates() {
+            const mapOverlay = document.getElementById('map-overlay');
+            mapOverlay.onmousemove = function(e) {
+                var rect = this.getBoundingClientRect();
+                var x = e.clientX - rect.left;
+                var y = e.clientY - rect.top;
+                // Log the X and Y coordinates relative to the map's top-left corner
+                console.log(`[MAP DEBUG] X: ${x.toFixed(0)}, Y: ${y.toFixed(0)}`);
+            };
+            console.log("Map Debugger Active (2D Minimap): Move mouse over the map overlay to get X, Y pixel coordinates.");
+        }
+
+
+        // Pannellum Initialization
+        document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
                 try {
                     // Configuration for the entire tour
-                    var viewer = pannellum.viewer('panorama', {
+                    const sceneData = {
                         "default": {
                             "firstScene": "Scene1_CornerA",
                             "author": "New South Associates Inc.",
@@ -309,32 +363,37 @@
                                 ]
                             }
                         }
-                    });
+                    };
+                    
+                    var viewer = pannellum.viewer('panorama', sceneData);
 
-                    // --- MAP UPDATE LOGIC ---
+                    // --- INITIAL UPDATES ---
                     // 1. Initial Map Update
                     updateMap(viewer.getScene()); 
+                    // 2. Initial Title Update
+                    updateTitle(viewer.getScene(), sceneData.scenes);
                     
-                    // 2. Set up listener for scene changes
+                    // 3. Set up listener for scene changes (Map and Title)
                     viewer.on('scenechange', function(sceneId) {
                         updateMap(sceneId);
+                        updateTitle(sceneId, sceneData.scenes);
                     });
-                    // --------------------------
+                    
 
 
                     // Utility function to get coordinates for hot spots (STILL ACTIVE!)
-                    function debugHotspotCoordinates(viewerInstance) {
-                        viewerInstance.on('mousedown', function(e) {
-                            var coords = viewerInstance.mouseEventToCoords(e);
-                            console.log('Pitch:', coords[0].toFixed(1), 'Yaw:', coords[1].toFixed(1));
-                            console.log('--- Copy this for your hotspot: ---');
-                            console.log('{"pitch": ' + coords[0].toFixed(1) + ', "yaw": ' + coords[1].toFixed(1) + ', "type": "scene", "text": "Next Room Name", "sceneId": "NextSceneID"}');
-                        });
-                        console.log("Hotspot Debugger Active: Click anywhere on the panorama to get coordinates (Pitch, Yaw).");
-                    }
+                    // function debugHotspotCoordinates(viewerInstance) {
+                    //    viewerInstance.on('mousedown', function(e) {
+                    //        var coords = viewerInstance.mouseEventToCoords(e);
+                    //        console.log('Pitch:', coords[0].toFixed(1), 'Yaw:', coords[1].toFixed(1));
+                    //        console.log('--- Copy this for your hotspot: ---');
+                    //        console.log('{"pitch": ' + coords[0].toFixed(1) + ', "yaw": ' + coords[1].toFixed(1) + ', "type": "scene", "text": "Next Room Name", "sceneId": "NextSceneID"}');
+                    //    });
+                    //    console.log("Hotspot Debugger Active: Click anywhere on the panorama to get coordinates (Pitch, Yaw).");
+                    //}
 
                     // *** UNCOMMENTED: Use this line to get precise coordinates in your browser console ***
-                    debugHotspotCoordinates(viewer); 
+                    // debugHotspotCoordinates(viewer); 
 
                 } catch (error) {
                     console.error("Pannellum Initialization Error:", error);
