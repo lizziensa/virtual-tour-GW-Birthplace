@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>George Washington Birthplace - Virtual Tour</title>
+    <!-- Load Pannellum CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+    <style>
+        /* --- BASE STYLES --- */
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            color: white;
+        }
+        #panorama {
+            width: 100vw; /* Viewport width */
+            height: 100vh; /* Viewport height */
+        }
+
+
+        /* --- MINIMAP STYLES: SCALE REDUCED --- */
+        #map-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            /* !!! UPDATED SIZE: 250px WIDE x 125px TALL !!! */
+            width: 250px; 
+            height: 150px;
+            background-image: url('https://i.imgur.com/BPow5qQ.png'); /* Map image URL */
+            background-size: cover;
+            border: 3px solid #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            z-index: 1000; /* Ensure map is on top */
+            overflow: hidden;
+        }
+
+        #map-marker {
+            /* Basic container positioning */
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            z-index: 1002; 
+            transition: transform 0.5s ease-in-out;
+        }
+
+        #map-marker::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ff0000; /* Red fill color */
+            border: 2px solid white;
+            
+            /* Create the teardrop shape by rotating a square and rounding the corners */
+            transform: rotate(-45deg);
+            border-radius: 50% 50% 50% 0; /* Creates the drop shape */
+            
+            /* Reposition so the tip (the 0 radius corner) is exactly centered on the map coordinate */
+            transform-origin: 100% 100%; /* Move rotation origin to the bottom-right tip */
+        }
+
+                /* --- CLIENT LOGO STYLES (Bottom Left) --- */
+        #client-logo {
+            /* Changed from fixed position div to block-level anchor tag */
+            display: block;
+            position: fixed;
+            bottom: 70px; /* Moved up for clearance */
+            left: 20px;  /* Position from left edge */
+            width: 50px;
+            height: 50px;
+            /* Ensure the area is clickable */
+            z-index: 1000;
+        }
+
+        /* Style the image container inside the anchor */
+        #logo-image {
+            width: 100%;
+            height: 100%;
+            background-image: url('https://i.imgur.com/adAJzRv.png'); /* <--- UPDATED LOGO URL */
+            background-size: cover;
+            background-color: white; /* Fallback background */
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            /* Ensure anchor style doesn't affect the image container */
+            text-decoration: none;
+        }
+    </style>
+            <!-- .pnlm-tooltip {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.674);
+            border-radius: 8px;
+            font-size: 14px;
+            color: #fff;
+            white-space: nowrap;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        } -->
+</head>
+<body>
+
+    <!-- This is the main container for the virtual tour -->
+    <div id="panorama"></div>
+
+    <!-- This is the container for the minimap -->
+    <div id="map-overlay">
+        <div id="map-marker"></div>
+    </div>
+
+        <!-- CLIENT LOGO ELEMENT (Now wrapped in a clickable anchor tag) -->
+    <a href="https://newsouthassoc.com/" target="_blank" id="client-logo">
+        <div id="logo-image"></div>
+    </a>
+
+
+    <!-- Load Pannellum JavaScript -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+    <script type="text/javascript">
+        // Pannellum Initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // --- MAP COORDINATES (SCALED FOR 250x125 RECTANGLE) ---
+            const mapCoordinates = {
+                // Corner Coordinates (Likely at the perimeter of the map)
+                "Scene1_CornerA":      { x: 225, y: 15 },  // Top-Left Corner
+                "Scene2_CornerB":      { x: 236, y: 113 },  // Top-Right Corner
+                "Scene3_CornerC":      { x: 23, y: 115 }, // Bottom-Right Corner
+                "Scene4_CornerD":      { x: 14, y: 14 }, // Bottom-Left Corner
+                
+                // Interior Room Coordinates (Scaled to fit the new size)
+                "Scene5_RoomB":        { x: 175, y: 95 },  
+                "Scene6_RoomA":        { x: 96, y: 103 }, 
+                "Scene7_RoomC":        { x: 176, y: 61 }, 
+                "Scene8_RoomD":        { x: 68, y: 55 }, 
+                "Scene9_RoomC_Angle":  { x: 118, y: 73 }, 
+                "Scene10_OutsideRoomD":{ x: 98, y: 17 }  
+            };
+
+            const marker = document.getElementById('map-marker');
+
+            // Function to update the marker position
+            function updateMap(sceneId) {
+                const coords = mapCoordinates[sceneId];
+                if (coords) {
+                    // HIGHLIGHTED CHANGE: Y-offset decreased from 14px to 16px to shift the marker UP by 2 pixels.
+                    marker.style.transform = `translate(${coords.x - 14}px, ${coords.y - 16}px)`; 
+                    
+                } else {
+                    // Hide element if scene is not mapped
+                    marker.style.transform = `translate(-100px, -100px)`; 
+                }
+            }
+
+
+            setTimeout(function() {
+                try {
+                    // Configuration for the entire tour
+                    var viewer = pannellum.viewer('panorama', {
+                        "default": {
+                            "firstScene": "Scene1_CornerA",
+                            "author": "New South Associates Inc.",
+                            "title": "George Washington Birthplace - Virtual Tour",
+                            "sceneFadeDuration": 1000, 
+                            "autoLoad": true, 
+                            "autoRotate": -1, 
+                            "showControls": true 
+                        },
+                        "scenes": {
+
+                            // --- SCENE 1: CORNER A (Start) ---done
+                            "Scene1_CornerA": {
+                                "title": "1. Corner A (Main Entrance)",
+                                "hfov": 120, "pitch": 5, "yaw": 150, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/3hjA7OG.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": -7.0, "yaw": 133.9, "type": "scene", "text": "To Corner B", "sceneId": "Scene2_CornerB"},
+                                    {"pitch": -5.3, "yaw": -137.1, "type": "scene", "text": "To Outside Room D", "sceneId": "Scene10_OutsideRoomD"},
+                                    {"pitch": -13.6, "yaw": 168.7, "type": "scene", "text": "To Room B", "sceneId": "Scene5_RoomB"},
+                                    {"pitch": -21.3, "yaw": 173.7, "type": "scene", "text": "To Room C", "sceneId": "Scene7_RoomC"}
+                                ]
+                            },
+
+                            // --- SCENE 2: CORNER B ---done
+                            "Scene2_CornerB": {
+                                "title": "2. Corner B",
+                                "hfov": 120, "pitch": 5, "yaw": 0, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/m7tqag8.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": -1.8, "yaw": -60.9, "type": "scene", "text": "To Corner C", "sceneId": "Scene3_CornerC"},
+                                    {"pitch": -6.2, "yaw": 30.9, "type": "scene", "text": "To Corner A", "sceneId": "Scene1_CornerA"},
+                                    {"pitch": -21.2, "yaw": -43.3, "type": "scene", "text": "To Room B", "sceneId": "Scene5_RoomB"},
+                                    {"pitch": -10.6, "yaw": -50.1, "type": "scene", "text": "To Room A", "sceneId": "Scene6_RoomA"},
+                                    {"pitch": -13.0, "yaw": 0.8, "type": "scene", "text": "To Room C", "sceneId": "Scene7_RoomC"}
+                                ]
+                            },
+                            
+                            // --- SCENE 3: CORNER C ---done
+                            "Scene3_CornerC": {
+                                "title": "3. Corner C",
+                                "hfov": 110, "pitch": 0, "yaw": 100, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/EECwGOI.jpeg", 
+                                "hotSpots": [
+                                    { "pitch": -5.2, "yaw": 90, "type": "scene", "text": "Go to Corner D", "sceneId": "Scene4_CornerD" },
+                                    {"pitch": -23.6, "yaw": 161.3, "type": "scene", "text": "To Room A", "sceneId": "Scene6_RoomA"},
+                                    {"pitch": -12.5, "yaw": 152.0, "type": "scene", "text": "To Room C (Other Angle)", "sceneId": "Scene9_RoomC_Angle"},
+                                    {"pitch": -3.6, "yaw": -168.6, "type": "scene", "text": "To Corner B", "sceneId": "Scene2_CornerB"},
+                                    {"pitch": -17.5, "yaw": 116.8, "type": "scene", "text": "To Room D", "sceneId": "Scene8_RoomD"},
+                                    {"pitch": -5.4, "yaw": 126.7, "type": "scene", "text": "To Corner of Room D", "sceneId": "Scene10_OutsideRoomD"}
+                                  
+                                ]
+                            },
+
+                            // --- SCENE 4: CORNER D ---done
+                            "Scene4_CornerD": {
+                                "title": "4. Corner D",
+                                "hfov": 100, "pitch": 0, "yaw": 0, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/i9Qyo2k.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": -7.5, "yaw": -50.9, "type": "scene", "text": "To Corner of Room D", "sceneId": "Scene10_OutsideRoomD"},
+                                    {"pitch": -20.9, "yaw": -15.7, "type": "scene", "text": "To Room D", "sceneId": "Scene8_RoomD"},
+                                    {"pitch": -5.5, "yaw": 31.9, "type": "scene", "text": "To Corner C", "sceneId": "Scene3_CornerC"},
+                                    {"pitch": -12.1, "yaw": -8.9, "type": "scene", "text": "To Room A", "sceneId": "Scene6_RoomA"}
+                                ]
+                            },
+
+                            // --- SCENE 5: ROOM B ---done
+                            "Scene5_RoomB": {
+                                "title": "5. Room B",
+                                "hfov": 100, "pitch": 0, "yaw": 0, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/o6xloEK.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": -4.8, "yaw": -114.3, "type": "scene", "text": "To Room A", "sceneId": "Scene6_RoomA"},
+                                    {"pitch": 3.4, "yaw": -124.6, "type": "scene", "text": "To Corner C", "sceneId": "Scene3_CornerC"},
+                                    {"pitch": 3.8, "yaw": 115.3, "type": "scene", "text": "To Corner B", "sceneId": "Scene2_CornerB"},
+                                    {"pitch": 3.0, "yaw": 23.1, "type": "scene", "text": "To Corner A", "sceneId": "Scene1_CornerA"},
+                                    {"pitch": -4.5, "yaw": 15.2, "type": "scene", "text": "To Room C", "sceneId": "Scene7_RoomC"}
+
+                                ]
+                            },
+
+                            // --- SCENE 6: ROOM A ---done
+                            "Scene6_RoomA": {
+                                "title": "6. Room A",
+                                "hfov": 100, "pitch": 0, "yaw": 0, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/Meagr6x.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": -9.2, "yaw": -58.9, "type": "scene", "text": "To Room C (Other Angle)", "sceneId": "Scene9_RoomC_Angle"},
+                                    {"pitch": -12.7, "yaw": -120.1, "type": "scene", "text": "To Room D", "sceneId": "Scene8_RoomD"},
+                                    {"pitch": 4.8, "yaw": 148.0, "type": "scene", "text": "To Corner C", "sceneId": "Scene3_CornerC"},
+                                    {"pitch": 1.8, "yaw": 7.3, "type": "scene", "text": "To Corner B", "sceneId": "Scene2_CornerB"}
+
+                                ]
+                            },
+
+                            // --- SCENE 7: ROOM C ---done
+                            "Scene7_RoomC": {
+                                "title": "7. Room C",
+                                "hfov": 100, "pitch": 0, "yaw": 0, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/IARKAvX.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": -28.7, "yaw": 32.3, "type": "scene", "text": "To Room B", "sceneId": "Scene5_RoomB"},
+                                    {"pitch": -14.2, "yaw": 83.8, "type": "scene", "text": "To Room A", "sceneId": "Scene6_RoomA"},
+                                    {"pitch": -12.2, "yaw": 104.2, "type": "scene", "text": "To Room C (Other Angle)", "sceneId": "Scene9_RoomC_Angle"},
+                                    {"pitch": -5.7, "yaw": -109.4, "type": "scene", "text": "Back to Corner A", "sceneId": "Scene1_CornerA"},
+                                    {"pitch": -5.0, "yaw": -16.5, "type": "scene", "text": "To Corner B", "sceneId": "Scene2_CornerB"}
+                                ]
+                            },
+
+                            // --- SCENE 8: ROOM D ---done
+                            "Scene8_RoomD": {
+                                "title": "8. Room D",
+                                "hfov": 100, "pitch": 0, "yaw": 0, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/c5dGCEx.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": 2.4, "yaw": 21.1, "type": "scene", "text": "To Corner D", "sceneId": "Scene4_CornerD"},
+                                    {"pitch": -15.3, "yaw": 140.0, "type": "scene", "text": "To Room A", "sceneId": "Scene6_RoomA"},
+                                    {"pitch": 2.4, "yaw": -147.9, "type": "scene", "text": "To Corner C", "sceneId": "Scene3_CornerC"},
+                                    {"pitch": -9.4, "yaw": 82.6, "type": "scene", "text": "To Room C (Other Angle)", "sceneId": "Scene9_RoomC_Angle"}
+                                ]
+                            },
+
+                            // --- SCENE 9: ROOM C (Other Angle) ---done
+                            "Scene9_RoomC_Angle": {
+                                "title": "9. Room C (Other Angle)",
+                                "hfov": 100, "pitch": 0, "yaw": 0, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/yMNnhef.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": -23.1, "yaw": 100.0, "type": "scene", "text": "To Room A", "sceneId": "Scene6_RoomA"},
+                                    {"pitch": -3.8, "yaw": -57.0, "type": "scene", "text": "To Room C", "sceneId": "Scene7_RoomC"},
+                                    {"pitch": -11.5, "yaw": -7.9, "type": "scene", "text": "To Room B", "sceneId": "Scene5_RoomB"}
+                                ]
+                            },
+
+                            // --- SCENE 10: OUTSIDE ROOM D (Final Scene) ---done
+                            "Scene10_OutsideRoomD": {
+                                "title": "10. Outside Room D",
+                                "hfov": 100, "pitch": 0, "yaw": 0, "type": "equirectangular",
+                                "panorama": "https://i.imgur.com/6CyVq8i.jpeg", 
+                                "hotSpots": [
+                                    {"pitch": -28.1, "yaw": -125.5, "type": "scene", "text": "To Room D", "sceneId": "Scene8_RoomD"},
+                                    {"pitch": -18.3, "yaw": -169.9, "type": "scene", "text": "To Room A", "sceneId": "Scene6_RoomA"},
+                                    {"pitch": -4.4, "yaw": 89.8, "type": "scene", "text": "Back To Corner A", "sceneId": "Scene1_CornerA"},
+                                    {"pitch": -7.2, "yaw": -81.7, "type": "scene", "text": "To Corner D", "sceneId": "Scene4_CornerD"},
+                                    {"pitch": -11.8, "yaw": 116.7, "type": "scene", "text": "To Room C", "sceneId": "Scene7_RoomC"}
+                                ]
+                            }
+                        }
+                    });
+
+                    // --- MAP UPDATE LOGIC ---
+                    // 1. Initial Map Update
+                    updateMap(viewer.getScene()); 
+                    
+                    // 2. Set up listener for scene changes
+                    viewer.on('scenechange', function(sceneId) {
+                        updateMap(sceneId);
+                    });
+                    // --------------------------
+
+
+                    // Utility function to get coordinates for hot spots (STILL ACTIVE!)
+                    function debugHotspotCoordinates(viewerInstance) {
+                        viewerInstance.on('mousedown', function(e) {
+                            var coords = viewerInstance.mouseEventToCoords(e);
+                            console.log('Pitch:', coords[0].toFixed(1), 'Yaw:', coords[1].toFixed(1));
+                            console.log('--- Copy this for your hotspot: ---');
+                            console.log('{"pitch": ' + coords[0].toFixed(1) + ', "yaw": ' + coords[1].toFixed(1) + ', "type": "scene", "text": "Next Room Name", "sceneId": "NextSceneID"}');
+                        });
+                        console.log("Hotspot Debugger Active: Click anywhere on the panorama to get coordinates (Pitch, Yaw).");
+                    }
+
+                    // *** UNCOMMENTED: Use this line to get precise coordinates in your browser console ***
+                    debugHotspotCoordinates(viewer); 
+
+                } catch (error) {
+                    console.error("Pannellum Initialization Error:", error);
+                    // Display a user-friendly error message if initialization fails
+                    var container = document.getElementById('panorama');
+                    if (container) {
+                        container.innerHTML = '<div style="background: black; color: white; padding: 20px; text-align: center;">\
+                            <h1>Virtual Tour Error</h1>\
+                            <p>There was an issue loading the panoramic viewer. Please check the console for details.</p>\
+                            <p style="font-size: 0.8em;">Please ensure your image links are valid and accessible.</p>\
+                        </div>';
+                    }
+                }
+            }, 0); // End of setTimeout
+        }); 
+    </script>
+</body>
+</html>
